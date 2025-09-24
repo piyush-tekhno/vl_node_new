@@ -18,7 +18,7 @@ export default function HomeLayout() {
       }}
     >
       <Stack.Screen 
-        name="index" 
+        name="VisitorLogDashboard" 
         options={{ 
           title: 'Dashboard',
            presentation : "card",

@@ -10,36 +10,22 @@ import {
   KeyboardAvoidingView,
   Platform 
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/src/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { useContext } from 'react';
-import { AuthContext } from '@/src/context/AuthContext';
+import { useAuth } from '@/src/context/AuthContext';
 
 export default function Login() {
   const router = useRouter();
   const { colors } = useTheme();
-
-  const {login} = useContext(AuthContext)
+  const { login } = useAuth();
   
   const [email, setEmail] = useState('admin@gmail.com');
   const [password, setPassword] = useState('Password@123');
   const [isLoading, setIsLoading] = useState(false);
 
-    type DecodedToken = {
-  user_id: number;
-  role_id: number;
-  role_name: string;
-  name: string;
-  email: string;
-  mobile: string;
-  iat: number;
-  exp: number;
-};
-
-   const handleLogin = async () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please enter both email and password");
       return;
@@ -56,19 +42,21 @@ export default function Login() {
       if (response.data.success) {
         const { accessToken } = response.data.data;
 
-        // ✅ Save & decode with AuthContext
+        // ✅ Save token using AuthContext
         await login(accessToken);
 
-        console.log("🔑 Saved Token:", accessToken);
-        console.log("👤 Decoded User:", response.data.data.user);
+        console.log("🔑 Login - Token saved to AuthContext");
+        console.log("👤 Login - User data:", response.data.data.user);
 
         Alert.alert("Success", "Login successful!");
-        router.replace("/(tabs)/home/DashCount");
+        
+        // Use replace to prevent going back to login
+        router.push("/(tabs)/home/VisitorLogDashboard");
       } else {
         Alert.alert("Error", response.data.message || "Login failed");
       }
     } catch (error: any) {
-      console.log(error.response?.data || error.message);
+      console.log("❌ Login Error:", error.response?.data || error.message);
       Alert.alert("Error", error.response?.data?.message || "Something went wrong");
     } finally {
       setIsLoading(false);
@@ -153,8 +141,6 @@ export default function Login() {
   );
 }
 
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -172,15 +158,14 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginTop: 16,
-    marginBottom: 8,
   },
   formContainer: {
-    borderRadius: 16,
-    padding: 24,
+    padding: 20,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 4,
     elevation: 3,
   },
   inputGroup: {
@@ -188,34 +173,33 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 56,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 50,
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    height: '100%',
   },
   loginButton: {
-    height: 56,
-    borderRadius: 12,
+    height: 50,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 10,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },

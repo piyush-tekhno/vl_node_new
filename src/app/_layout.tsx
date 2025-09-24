@@ -1,33 +1,52 @@
-// src/app/_layout.tsx
-import { Stack } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ThemeProvider } from '../constants/theme';
+import { Stack } from "expo-router";
+import { ThemeProvider } from "../constants/theme";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
+import { AuthProvider, useAuth } from "../context/AuthContext";
+import { View, ActivityIndicator } from "react-native";
+import { useTheme } from "../constants/theme";
 
-export default function RootLayout() {
-  const [isLoggedIn, setIsLoggedIn] = useState<null | boolean>(null);
+const queryClient = new QueryClient();
 
-  useEffect(() => {
-    (async () => {
-      const token = await AsyncStorage.getItem('token');
-      setIsLoggedIn(!!token);
-    })();
-  }, []);
+// Loading component
+function LoadingScreen() {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+      <ActivityIndicator size="large" color={colors.primary} />
+    </View>
+  );
+}
 
-  if (isLoggedIn === null) return null; 
+// Component to handle routing based on auth state
+function RootLayoutNav() {
+  const { token, loading } = useAuth();
+
+  // Show loading screen while checking auth state
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
-    <ThemeProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        {!isLoggedIn ? (
-          <>
-            <Stack.Screen name="auth/login" />
-            <Stack.Screen name="auth/register" />
-          </>
-        ) : (
-          <Stack.Screen name="(tabs)" />
-        )}
-      </Stack>
-    </ThemeProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      {!token ? (
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
+      ) : (
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      )}
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <RootLayoutNav />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

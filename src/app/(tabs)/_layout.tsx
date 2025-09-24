@@ -1,15 +1,24 @@
+// src/app/(tabs)/_layout.tsx
 import { Tabs } from "expo-router";
 import React from "react";
 import { IconSymbol } from "../../components/ui/icon-symbol";
 import { HapticTab } from "../../components/haptic-tab";
 import { TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { useTheme } from "@/src/constants/theme"; // ✅ Use your ThemeContext
+import { useTheme } from "@/src/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/src/context/AuthContext";
+import { Redirect } from "expo-router";
 
 export default function TabLayout() {
   const router = useRouter();
-  const { colors } = useTheme(); // ✅ This gives you LightColors or DarkColors automatically
+  const { colors } = useTheme();
+  const { token } = useAuth();
+
+  // Redirect to login if not authenticated
+  if (!token) {
+    return <Redirect href="/auth/login" />;
+  }
 
   return (
     <Tabs
@@ -21,7 +30,7 @@ export default function TabLayout() {
         headerRight: () => (
           <TouchableOpacity
             style={{ marginRight: 15 }}
-            onPress={() => router.push("/profile")}
+            onPress={() => router.push("/(tabs)/profile")} // ← Update this navigation
           >
             <Image
               source={{ uri: "https://i.pravatar.cc/100" }}
@@ -43,7 +52,6 @@ export default function TabLayout() {
         name="home"
         options={{
           title: "Home",
-          // headerShown : true,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
           ),
@@ -53,7 +61,7 @@ export default function TabLayout() {
         name="form"
         options={{
           title: "Forms",
-          headerShown : false,
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <Ionicons name="document-text-outline" size={28} color={color} />
           ),
@@ -63,7 +71,7 @@ export default function TabLayout() {
         name="Complaints"
         options={{
           title: "Complaints",
-          headerShown : false,
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <Ionicons name="chatbox-ellipses-outline" size={28} color={color} />
           ),
@@ -73,9 +81,19 @@ export default function TabLayout() {
         name="Department"
         options={{
           title: "Department",
-          headerShown : false,
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <Ionicons name="business-outline" size={28} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          headerShown: false,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person-outline" size={28} color={color} />
           ),
         }}
       />

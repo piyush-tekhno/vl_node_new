@@ -1,31 +1,60 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/src/context/AuthContext';
+import { getDetpList } from '@/src/api/getDepartment';
+import { useQuery } from '@tanstack/react-query';
+import { addDepartment } from '@/src/api/addDepartment';
+
+import { useQueryClient } from '@tanstack/react-query';
+
 
 export default function Department() {
   const { colors } = useTheme();
   const [deptName, setDeptName] = useState('');
   const [deptHead, setDeptHead] = useState('');
   const [departments, setDepartments] = useState<Array<{dept_name: string, dept_head: string}>>([]);
+  const {token } = useAuth();
+const queryClient = useQueryClient();
 
-  const handleCreateDepartment = () => {
-    if (!deptName.trim() || !deptHead.trim()) {
-      Alert.alert('Error', 'Please fill in both department name and department head');
-      return;
+
+  const {data, isLoading, error} = useQuery({
+    queryKey : ['deptList'],
+    queryFn : () => getDetpList(token || "")
+  })
+
+  useEffect(() => {
+    if(data){
+      console.log("Departments from API:", data);
+            setDepartments(data);
     }
+  }, [data])
 
-    const newDepartment = {
-      dept_name: deptName.trim(),
-      dept_head: deptHead.trim()
-    };
 
-    setDepartments(prev => [newDepartment, ...prev]);
+
+  const handleCreateDepartment = async () => {
+  if (!deptName.trim() || !deptHead.trim()) {
+    Alert.alert('Error', 'Please fill in both department name and department head');
+    return;
+  }
+
+  try {
+    const newDept = { dept_name: deptName.trim(), dept_head: deptHead.trim() };
+    await addDepartment(token || "", newDept);
+
+    // Clear inputs
     setDeptName('');
     setDeptHead('');
-    
+
+    // Optionally, refetch the department list
+    queryClient.invalidateQueries(['deptList']); // ✅ requires import { useQueryClient } from '@tanstack/react-query'
+
     Alert.alert('Success', 'Department created successfully!');
-  };
+  } catch (error) {
+    Alert.alert('Error', 'Failed to create department');
+  }
+};
 
   const handleDeleteDepartment = (index: number) => {
     Alert.alert(
