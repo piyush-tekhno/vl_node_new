@@ -13,7 +13,7 @@ export const LightColors = {
   textSecondary: '#4B5563',
   textTertiary: '#6B7280',
   surface: '#FFFFFF',
-  success : '#78D23D',
+  success : '#7bc748ff',
   background: '#FEF3C7',
   border: '#E5E7EB',
   
@@ -32,7 +32,7 @@ export const DarkColors = {
   textPrimary: '#F9FAFB',
   textSecondary: '#E5E7EB',
   textTertiary: '#9CA3AF',
-   success : '#78D23D',
+   success : '#7bc748ff',
   surface: '#111827',
   background: '#1F2937',
   border: '#374151',

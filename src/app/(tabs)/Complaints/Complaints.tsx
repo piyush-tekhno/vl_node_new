@@ -10,202 +10,117 @@ import React, { useState } from "react";
 import { useTheme } from "../../../constants/theme";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import { useQuery } from "@tanstack/react-query";
+import { getAllComplaints } from "@/src/api/complaints/getAllComplaints";
+import { useAuth } from "@/src/context/AuthContext";
+import Colors from "@/src/constants/Colors";
 export default function Complaints() {
   const { colors } = useTheme();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"pending" | "resolved">(
     "pending"
-  ); // Only pending and resolved
+  );
+  const { token } = useAuth(); // 🔑 get token from context
+  const router = useRouter();
 
-    const router = useRouter();
-  const complaintData = [
-    {
-      id: "1",
-      title: "Network Connectivity Issue",
-      description: "Unable to connect to office WiFi in conference room",
-      category: "IT Infrastructure",
-      priority: "High",
-      assignedTo: "IT Support Team",
-      status: "resolved" as const,
-      dateCreated: "2025-09-22",
-      dateResolved: "2025-09-22",
-      createdBy: "John Smith",
-      mobile: "+1 (555) 987-6543",
-    },
-    {
-      id: "2",
-      title: "Air Conditioning Not Working",
-      description: "AC unit in main office is blowing warm air",
-      category: "Facilities",
-      priority: "High",
-      assignedTo: "Maintenance Team",
-      status: "pending" as const,
-      dateCreated: "2025-09-22",
-      dateResolved: null,
-      createdBy: "Emily Chen",
-      mobile: "+1 (555) 876-5432",
-    },
-    {
-      id: "3",
-      title: "Printer Paper Jam",
-      description: "Printer on 3rd floor constantly jamming with A4 paper",
-      category: "Office Equipment",
-      priority: "Medium",
-      assignedTo: "IT Support Team",
-      status: "pending" as const,
-      dateCreated: "2025-09-21",
-      dateResolved: null,
-      createdBy: "Robert Johnson",
-      mobile: "+1 (555) 765-4321",
-    },
-    {
-      id: "4",
-      title: "Cleanliness Issue",
-      description: "Pantry area requires more frequent cleaning",
-      category: "Housekeeping",
-      priority: "Medium",
-      assignedTo: "Housekeeping Staff",
-      status: "resolved" as const,
-      dateCreated: "2025-09-21",
-      dateResolved: "2025-09-22",
-      createdBy: "Maria Garcia",
-      mobile: "+1 (555) 654-3210",
-    },
-    {
-      id: "5",
-      title: "Software License Renewal",
-      description: "Adobe Creative Cloud licenses expiring next week",
-      category: "Software",
-      priority: "High",
-      assignedTo: "IT Admin",
-      status: "pending" as const,
-      dateCreated: "2025-09-20",
-      dateResolved: null,
-      createdBy: "David Wilson",
-      mobile: "+1 (555) 543-2109",
-    },
-  ];
-
-  // Filter complaints by search input and status
-  const filteredComplaints = complaintData.filter((complaint) => {
-    const matchesSearch =
-      complaint.title.toLowerCase().includes(search.toLowerCase()) ||
-      complaint.description.toLowerCase().includes(search.toLowerCase()) ||
-      complaint.createdBy.toLowerCase().includes(search.toLowerCase()) ||
-      complaint.assignedTo.toLowerCase().includes(search.toLowerCase()) ||
-      complaint.category.toLowerCase().includes(search.toLowerCase());
-
-    const matchesStatus = complaint.status === filterStatus;
-
-    return matchesSearch && matchesStatus;
+  // Fetch complaints based on status
+  const {
+    data: complaints = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["getComplaints", filterStatus],
+    queryFn: () => getAllComplaints(token, filterStatus),
+    enabled: !!token, // only run when token is available
   });
 
-  const getStatusColor = (status: string) => {
-    return status === "resolved" ? colors.success : colors.warning;
-  };
+  // 🔍 Filter by search
+  const filteredComplaints = complaints.filter((complaint: any) => {
+    const matchesSearch =
+      complaint.complainer_name.toLowerCase().includes(search.toLowerCase()) ||
+      complaint.complainer_city.toLowerCase().includes(search.toLowerCase()) ||
+      complaint.complainer_mobile
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      complaint.complaint_reason.toLowerCase().includes(search.toLowerCase());
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case "high":
-        return colors.error;
-      case "medium":
-        return colors.warning;
-      case "low":
-        return colors.success;
-      default:
-        return colors.textSecondary;
-    }
-  };
+    return matchesSearch;
+  });
 
-  const renderComplaintItem = ({ item }: { item: any }) => (
-    <View style={[styles.complaintCard, { backgroundColor: colors.surface }]}>
-      {/* Header with Title, Status and Date */}
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>
-          {item.title}
-        </Text>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) },
-          ]}
-        >
-          <Text style={styles.statusText}>
-            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Priority and Category */}
-      <View style={styles.metaRow}>
-        <View
-          style={[
-            styles.priorityBadge,
-            { backgroundColor: getPriorityColor(item.priority) },
-          ]}
-        >
-          <Text style={styles.priorityText}>{item.priority} Priority</Text>
-        </View>
-        <Text style={[styles.category, { color: colors.textSecondary }]}>
-          {item.category}
-        </Text>
-      </View>
-
-      {/* Description */}
-      <Text style={[styles.description, { color: colors.textPrimary }]}>
-        {item.description}
+const renderComplaintItem = ({ item }: { item: any }) => (
+  <View style={[styles.complaintCard, { backgroundColor: colors.surface }]}>
+    {/* Header */}
+    <View style={styles.headerRow}>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>
+        {item.complainer_name}
       </Text>
-
-      {/* Assignment and Contact Info */}
-      <View style={styles.detailRow}>
-        <Text style={[styles.label, { color: colors.primary }]}>
-          👤 Assigned To:
-        </Text>
-        <Text style={[styles.value, { color: colors.textPrimary }]}>
-          {item.assignedTo}
-        </Text>
-      </View>
-
-      <View style={styles.detailRow}>
-        <Text style={[styles.label, { color: colors.primary }]}>
-          📅 Created:
-        </Text>
-        <Text style={[styles.value, { color: colors.textPrimary }]}>
-          {item.dateCreated}
-        </Text>
-      </View>
-
-      {item.status === "resolved" && (
-        <View style={styles.detailRow}>
-          <Text style={[styles.label, { color: colors.primary }]}>
-            ✅ Resolved:
-          </Text>
-          <Text style={[styles.value, { color: colors.textPrimary }]}>
-            {item.dateResolved}
-          </Text>
-        </View>
-      )}
-
-      {/* Created By */}
-      <View style={styles.footerRow}>
-        <View style={styles.creatorInfo}>
-          <Text style={[styles.creatorLabel, { color: colors.textSecondary }]}>
-            Created by:
-          </Text>
-          <Text style={[styles.creatorName, { color: colors.textPrimary }]}>
-            {item.createdBy}
-          </Text>
-        </View>
-        <Text style={[styles.mobile, { color: colors.textSecondary }]}>
-          {item.mobile}
-        </Text>
+      <View
+        style={[
+          styles.statusBadge,
+          {
+            backgroundColor:
+              item.status === "resolved" ? colors.success : colors.warning,
+          },
+        ]}
+      >
+        <Text style={styles.statusText}>{item.status}</Text>
       </View>
     </View>
-  );
+
+    {/* Complaint Reason */}
+    <Text style={[styles.description, { color: colors.textPrimary }]}>
+      {item.complaint_reason}
+    </Text>
+
+    {/* City */}
+    <View style={styles.detailRow}>
+      <Text style={[styles.label, { color: colors.primary }]}>📍 City:</Text>
+      <Text style={[styles.value, { color: colors.textPrimary }]}>
+        {item.complainer_city}
+      </Text>
+    </View>
+
+    {/* Mobile */}
+    <View style={styles.detailRow}>
+      <Text style={[styles.label, { color: colors.primary }]}>📱 Mobile:</Text>
+      <Text style={[styles.value, { color: colors.textPrimary }]}>
+        {item.complainer_mobile}
+      </Text>
+    </View>
+
+    {/* Resolved At OR Mark as Resolved Button */}
+    {item.status === "resolved" ? (
+      <View style={styles.detailRow}>
+        <Text style={[styles.label, { color: colors.primary }]}>
+          ✅ Resolved At:
+        </Text>
+        <Text style={[styles.value, { color: colors.textPrimary }]}>
+          {item.resolved_at}
+        </Text>
+      </View>
+    ) : (
+      <TouchableOpacity
+        style={[
+          styles.resolveButton, 
+          { 
+            backgroundColor: colors.success,
+            shadowColor: colors.success,
+          }
+        ]}
+        // onPress={() => markAsResolved(item.complaint_id)}
+      >
+        <Text style={styles.resolveButtonText}>Mark as Resolved</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+);
+
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Search Bar */}
       <View
         style={[styles.searchContainer, { backgroundColor: colors.background }]}
@@ -219,7 +134,7 @@ export default function Complaints() {
               borderColor: colors.primary,
             },
           ]}
-          placeholder="Search complaints by title, description, or assigned to..."
+          placeholder="Search by name, city, or reason..."
           placeholderTextColor={colors.textSecondary}
           value={search}
           onChangeText={setSearch}
@@ -233,10 +148,7 @@ export default function Complaints() {
         <TouchableOpacity
           style={[
             styles.filterButton,
-            filterStatus === "pending" && [
-              styles.filterButtonActive,
-              { backgroundColor: colors.primary },
-            ],
+            filterStatus === "pending" && { backgroundColor: colors.primary },
           ]}
           onPress={() => setFilterStatus("pending")}
         >
@@ -253,10 +165,7 @@ export default function Complaints() {
         <TouchableOpacity
           style={[
             styles.filterButton,
-            filterStatus === "resolved" && [
-              styles.filterButtonActive,
-              { backgroundColor: colors.primary },
-            ],
+            filterStatus === "resolved" && { backgroundColor: colors.primary },
           ]}
           onPress={() => setFilterStatus("resolved")}
         >
@@ -274,8 +183,13 @@ export default function Complaints() {
       {/* Results Count */}
       <View
         style={[
-          styles.resultsContainer, 
-         {flexDirection : 'row', justifyContent : 'space-between', marginHorizontal : 5, }, { backgroundColor: colors.background },
+          styles.resultsContainer,
+          {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginRight: 5,
+          },
+          { backgroundColor: colors.background },
         ]}
       >
         <Text style={[styles.resultsText, { color: colors.textSecondary }]}>
@@ -283,20 +197,18 @@ export default function Complaints() {
           {filteredComplaints.length !== 1 ? "s" : ""} found
         </Text>
 
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/Complaints/ResolveComplaints")}
-        >
-          <Text  style={[styles.resultsText, {fontWeight : 800}, { color: colors.textSecondary }]}>Resolve Complaints</Text>
-        </TouchableOpacity>
+       
       </View>
 
       {/* Complaints List */}
       <FlatList
         data={filteredComplaints}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.complaint_id.toString()}
         renderItem={renderComplaintItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshing={isLoading}
+        onRefresh={refetch}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -389,7 +301,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#fff",
-    
   },
   metaRow: {
     flexDirection: "row",
@@ -455,6 +366,42 @@ const styles = StyleSheet.create({
   mobile: {
     fontSize: 11,
   },
+ 
+
+  //mark as resolved styling
+   resolveButton: {
+    marginTop: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  
+  resolveButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+
+  // For loading/disabled state
+  resolveButtonDisabled: {
+    opacity: 0.6,
+    shadowOpacity: 0.1,
+    elevation: 1,
+  },
+
   emptyState: {
     padding: 40,
     alignItems: "center",

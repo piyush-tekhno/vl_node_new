@@ -1,5 +1,4 @@
 import axios from "axios";
-import { useAuth } from "../context/AuthContext";
 
 export const getDetpList = async (token : string) => {
   try {

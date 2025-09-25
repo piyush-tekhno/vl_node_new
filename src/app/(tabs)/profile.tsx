@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, StyleSheet, View, Text, ActivityIndicator, TouchableOpacity} from "react-native";
+import { ScrollView, StyleSheet, View, Text, ActivityIndicator, TouchableOpacity, Alert} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useTheme } from "../../constants/theme";
@@ -11,11 +11,11 @@ import LogoutButton from "../../screens/LogoutButton";
 import EditProfileModal from "../../screens/EditProfileModal";
 import { useQuery } from "@tanstack/react-query";
 import { getProfileInfo } from "../../api/profileApi";
-import { useAuth } from "../../context/AuthContext"; // Import useAuth
+import { useAuth } from "../../context/AuthContext";
 
 const ProfileScreen = () => {
   const { colors, theme, setTheme } = useTheme();
-  const { token, user: authUser, loading: authLoading } = useAuth(); // Get token from AuthContext
+  const { token, user: authUser, loading: authLoading } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -28,8 +28,6 @@ const ProfileScreen = () => {
     location: "loading...",
     user_photo: null
   });
-
-  const [editData, setEditData] = useState<any>({});
 
   // Debug logs
   useEffect(() => {
@@ -47,7 +45,7 @@ const ProfileScreen = () => {
       }
       return getProfileInfo(token);
     },
-    enabled: !!token && !authLoading, // Only run if token exists and auth is not loading
+    enabled: !!token && !authLoading,
     retry: 1,
   });
 
@@ -66,20 +64,35 @@ const ProfileScreen = () => {
       };
       
       setUserData(mappedData);
-      setEditData(mappedData);
     }
   }, [data]);
 
-  const handleSave = () => {
-    if (editData) {
-      setUserData({ ...editData });
-    }
-    setModalVisible(false);
-    refetch();
+  // Prepare initial data for modal
+  const getInitialEditData = () => ({
+    name: data?.name || userData.name,
+  email: data?.email || userData.email,
+  phone: data?.mobile_no || userData.phone,
+  location: data?.city || userData.location
+  });
+
+  const handleProfileUpdate = async (updatedData: any) => {
+    // Update local state with the new data from API response
+    const mappedData = {
+      name: updatedData.name || userData.name,
+      username: `@${updatedData.name?.toLowerCase()?.replace(/\s+/g, '')}` || userData.username,
+      email: updatedData.email || userData.email,
+      phone: updatedData.mobile_no || userData.phone,
+      location: updatedData.city || userData.location,
+      user_photo: userData.user_photo // Keep existing photo
+    };
+    
+    setUserData(mappedData);
+   await refetch(); // Refetch to get latest data from server
+    // Alert.alert("Success", "Profile updated successfully!");
+    console.log("here - profile")
   };
 
   const handleCancel = () => {
-    setEditData({ ...userData });
     setModalVisible(false);
   };
 
@@ -176,10 +189,8 @@ const ProfileScreen = () => {
       <EditProfileModal
         visible={modalVisible}
         onClose={handleCancel}
-        editData={editData}
-        setEditData={setEditData}
-        onSave={handleSave}
-        onCancel={handleCancel}
+        initialData={getInitialEditData()}
+        onProfileUpdate={handleProfileUpdate}
       />
     </SafeAreaView>
   );
