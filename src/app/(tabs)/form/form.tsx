@@ -8,7 +8,7 @@ import {
   ScrollView, 
   Image 
 } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '@/src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ import { Picker } from '@react-native-picker/picker';
 import { addComplaint } from '@/src/api/complaints/addComplaints';
 import { addVisitor } from '@/src/api/visitors/addVisitors';
 import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from 'expo-router';
 
 
 export default function Form() {
@@ -97,7 +98,8 @@ const LogEntryForm = () => {
   const [error, setError] = useState("");
 
   // Fetch departments on mount
-  useEffect(() => {
+ useFocusEffect(
+  useCallback(() => {
     const fetchDepartments = async () => {
       try {
         const deptList = await getDetpList(token);
@@ -109,8 +111,15 @@ const LogEntryForm = () => {
         setError('Failed to load departments');
       }
     };
+
     fetchDepartments();
-  }, [token]);
+
+    // optional: cleanup when screen unfocuses
+    return () => {
+      setDepartments([]); // or keep existing state if you prefer
+    };
+  }, [token]) // runs again if token changes
+);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -211,10 +220,10 @@ const LogEntryForm = () => {
       return;
     }
 
-    if (!formData.visitorPhoto) {
-      setError('Please capture or select a visitor photo');
-      return;
-    }
+    // if (!formData.visitorPhoto) {
+    //   setError('Please capture or select a visitor photo');
+    //   return;
+    // }
 
     setLoading(true);
     setError("");
@@ -404,7 +413,7 @@ const LogEntryForm = () => {
 
       {/* Photo Section */}
       <View style={styles.photoSection}>
-        <Text style={[styles.photoLabel, { color: colors.textPrimary }]}>Visitor Photo *</Text>
+        <Text style={[styles.photoLabel, { color: colors.textPrimary }]}>Visitor Photo</Text>
         
         {formData.visitorPhoto ? (
           <View style={styles.photoPreviewContainer}>
@@ -422,17 +431,17 @@ const LogEntryForm = () => {
         ) : (
           <View style={styles.photoButtonsContainer}>
             <TouchableOpacity 
-              style={[styles.photoButton, { backgroundColor: colors.primary }]}
+              style={[styles.photoButton, { backgroundColor: colors.secondary }]}
               onPress={takePhoto}
             >
-              <Text style={[styles.photoButtonText, { color: colors.surface }]}>📸 Take Photo</Text>
+              <Text style={[styles.photoButtonText, { color: colors.textTertiary }]}>📸 Take Photo</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={[styles.photoButton, { backgroundColor: colors.secondary }]}
               onPress={chooseFromGallery}
             >
-              <Text style={[styles.photoButtonText, { color: colors.surface }]}>🖼️ Choose from Gallery</Text>
+              <Text style={[styles.photoButtonText, { color: colors.textTertiary }]}>🖼️ Choose from Gallery</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -780,6 +789,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
+    marginBottom : 40, 
   },
   complaintButton: {
     // backgroundColor handled by theme

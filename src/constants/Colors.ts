@@ -16,7 +16,8 @@ export const LightColors = {
   success : '#7bc748ff',
   background: '#FEF3C7',
   border: '#E5E7EB',
-  
+  info : '#678cd6ff',
+  disabled : '#808080',
 };
 
 export const DarkColors = {
@@ -36,6 +37,8 @@ export const DarkColors = {
   surface: '#111827',
   background: '#1F2937',
   border: '#374151',
+   info : '#678cd6ff',
+    disabled : '#808080',
 };
 
 // For backward compatibility

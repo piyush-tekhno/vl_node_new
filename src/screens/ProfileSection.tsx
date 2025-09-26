@@ -23,6 +23,9 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({ userData, onPhotoUpdate
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
 
+  // Import local profile image - adjust the path based on your project structure
+  const defaultProfileImage = require('../assets/images/profile.jpg');
+
   const pickImage = async () => {
     try {
       console.log("🖼️ Starting image picker from gallery...");
@@ -84,58 +87,56 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({ userData, onPhotoUpdate
     }
   };
 
- const uploadImage = async (imageAsset: any) => {
-  if (!token) {
-    Alert.alert('Error', 'Authentication required');
-    return;
-  }
-
-  console.log("🚀 Starting upload with asset:", {
-    ...imageAsset,
-    uri: imageAsset.uri?.substring(0, 50) + '...' // Log partial URI
-  });
-
-  setUploading(true);
-
-  try {
-    // Add a small delay to ensure file is ready
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const response = await updateProfilePhoto(token, imageAsset);
-    
-    if (response.success) {
-      Alert.alert('Success', 'Profile photo updated successfully!');
-      
-      // Invalidate and refetch profile data
-      await queryClient.invalidateQueries({ queryKey: ['profile'] });
-      await queryClient.refetchQueries({ queryKey: ['profile'] });
-      
-    } else {
-      throw new Error(response.message || 'Failed to update profile photo');
+  const uploadImage = async (imageAsset: any) => {
+    if (!token) {
+      Alert.alert('Error', 'Authentication required');
+      return;
     }
-  } catch (error: any) {
-    console.error('❌ Upload error details:', {
-      message: error.message,
-      response: error.response?.data,
-      asset: imageAsset,
-      code: error.code
+
+    console.log("🚀 Starting upload with asset:", {
+      ...imageAsset,
+      uri: imageAsset.uri?.substring(0, 50) + '...'
     });
-    
-    let errorMessage = 'Failed to upload photo. Please try again.';
-    
-    if (error.message.includes('Network Error') || error.message.includes('Network request failed')) {
-      errorMessage = 'Network error. Please check your connection and server URL.';
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    } else if (error.code === 'ENOENT') {
-      errorMessage = 'File not found. Please try taking the photo again.';
+
+    setUploading(true);
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const response = await updateProfilePhoto(token, imageAsset);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Profile photo updated successfully!');
+        
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+        await queryClient.refetchQueries({ queryKey: ['profile'] });
+        
+      } else {
+        throw new Error(response.message || 'Failed to update profile photo');
+      }
+    } catch (error: any) {
+      console.error('❌ Upload error details:', {
+        message: error.message,
+        response: error.response?.data,
+        asset: imageAsset,
+        code: error.code
+      });
+      
+      let errorMessage = 'Failed to upload photo. Please try again.';
+      
+      if (error.message.includes('Network Error') || error.message.includes('Network request failed')) {
+        errorMessage = 'Network error. Please check your connection and server URL.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.code === 'ENOENT') {
+        errorMessage = 'File not found. Please try taking the photo again.';
+      }
+      
+      Alert.alert('Upload Failed', errorMessage);
+    } finally {
+      setUploading(false);
     }
-    
-    Alert.alert('Upload Failed', errorMessage);
-  } finally {
-    setUploading(false);
-  }
-};
+  };
 
   const showPhotoOptions = () => {
     Alert.alert(
@@ -162,10 +163,12 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({ userData, onPhotoUpdate
     <View style={[styles.profileSection, { backgroundColor: colors.secondary }]}>
       <View style={styles.avatarContainer}>
         <Image
-          source={{ 
-            uri: userData.user_photo || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80' 
-          }}
+          source={userData.user_photo ? { uri: userData.user_photo } : defaultProfileImage}
           style={styles.avatar}
+          onError={(e) => {
+            console.log('Error loading profile image, using default');
+            // Fallback to default image if there's an error
+          }}
         />
         <TouchableOpacity 
           style={[styles.editAvatarButton, { backgroundColor: colors.primary }]}

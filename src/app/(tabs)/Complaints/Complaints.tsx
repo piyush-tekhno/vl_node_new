@@ -5,23 +5,39 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
+  Alert,
+  Modal,
+  ScrollView,
 } from "react-native";
 import React, { useState } from "react";
 import { useTheme } from "../../../constants/theme";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllComplaints } from "@/src/api/complaints/getAllComplaints";
+import { deleteComplaint } from "@/src/api/complaints/deleteComplaints";
+import { resolveComplaint } from "@/src/api/complaints/postResolvePending";
+import { updateComplaint } from "@/src/api/complaints/updateComplaint";
 import { useAuth } from "@/src/context/AuthContext";
 import Colors from "@/src/constants/Colors";
+
 export default function Complaints() {
   const { colors } = useTheme();
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"pending" | "resolved">(
-    "pending"
-  );
-  const { token } = useAuth(); // 🔑 get token from context
+  const [filterStatus, setFilterStatus] = useState<"pending" | "resolved">("pending");
+  const { token } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // Edit modal state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingComplaint, setEditingComplaint] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    complainer_name: "",
+    complainer_mobile: "",
+    complainer_city: "",
+    complaint_reason: "",
+  });
 
   // Fetch complaints based on status
   const {
@@ -32,99 +48,267 @@ export default function Complaints() {
   } = useQuery({
     queryKey: ["getComplaints", filterStatus],
     queryFn: () => getAllComplaints(token, filterStatus),
-    enabled: !!token, // only run when token is available
+    enabled: !!token,
   });
+
+  // Delete complaint mutation
+  const deleteMutation = useMutation({
+    mutationFn: (complaintId: number) => deleteComplaint(token, complaintId),
+    onSuccess: (data, complaintId) => {
+      queryClient.invalidateQueries({ queryKey: ["getComplaints"] });
+      Alert.alert("Success", `Complaint #${complaintId} deleted successfully`);
+    },
+    onError: (error: any) => {
+      Alert.alert("Error", "Failed to delete complaint. Please try again.");
+      console.error("Delete error:", error);
+    },
+  });
+
+  // Resolve complaint mutation
+  const resolveMutation = useMutation({
+    mutationFn: (complaintId: number) => resolveComplaint(token, complaintId),
+    onSuccess: (data, complaintId) => {
+      queryClient.invalidateQueries({ queryKey: ["getComplaints"] });
+      Alert.alert(
+        "Success", 
+        `Complaint #${complaintId} marked as resolved successfully!\n\nWhatsApp notification has been sent to the complainer.`
+      );
+    },
+    onError: (error: any) => {
+      Alert.alert("Error", "Failed to mark complaint as resolved. Please try again.");
+      console.error("Resolve error:", error);
+    },
+  });
+
+  // Update complaint mutation
+// Update your mutation to handle errors better
+const updateMutation = useMutation({
+  mutationFn: ({ complaintId, formData }: { complaintId: number; formData: any }) =>
+    updateComplaint(token, complaintId, formData),
+  onSuccess: (data, variables) => {
+    queryClient.invalidateQueries({ queryKey: ["getComplaints"] });
+    setEditModalVisible(false);
+    Alert.alert("Success", `Complaint #${variables.complaintId} updated successfully`);
+  },
+  onError: (error: any) => {
+    console.error('Full update error:', error);
+    Alert.alert(
+      "Update Error", 
+      error.message || "Failed to update complaint. Please try again."
+    );
+  },
+});
+
+  // Handle delete confirmation
+  const handleDelete = (complaintId: number, complainerName: string) => {
+    Alert.alert(
+      "Delete Complaint",
+      `Are you sure you want to delete complaint from ${complainerName}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(complaintId) },
+      ]
+    );
+  };
+
+  // Handle resolve confirmation
+  const handleResolve = (complaintId: number, complainerName: string) => {
+    Alert.alert(
+      "Mark as Resolved",
+      `Are you sure you want to mark complaint from ${complainerName} as resolved?\n\nThis will send a WhatsApp notification to the complainer.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Mark Resolved", style: "default", onPress: () => resolveMutation.mutate(complaintId) },
+      ]
+    );
+  };
+
+  // Handle edit button click
+  const handleEdit = (complaint: any) => {
+    setEditingComplaint(complaint);
+    setEditForm({
+      complainer_name: complaint.complainer_name,
+      complainer_mobile: complaint.complainer_mobile,
+      complainer_city: complaint.complainer_city,
+      complaint_reason: complaint.complaint_reason,
+    });
+    setEditModalVisible(true);
+  };
+
+  // Handle update submission
+  const handleUpdate = () => {
+    if (!editingComplaint) return;
+
+    // Basic validation
+    if (!editForm.complainer_name.trim() || !editForm.complaint_reason.trim()) {
+      Alert.alert("Error", "Please fill in all required fields.");
+      return;
+    }
+
+    if (!editForm.complainer_mobile.trim() || editForm.complainer_mobile.length !== 10) {
+      Alert.alert("Error", "Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    updateMutation.mutate({
+      complaintId: editingComplaint.complaint_id,
+      formData: editForm,
+    });
+  };
+
+  // Close edit modal
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setEditingComplaint(null);
+    setEditForm({
+      complainer_name: "",
+      complainer_mobile: "",
+      complainer_city: "",
+      complaint_reason: "",
+    });
+  };
 
   // 🔍 Filter by search
   const filteredComplaints = complaints.filter((complaint: any) => {
     const matchesSearch =
       complaint.complainer_name.toLowerCase().includes(search.toLowerCase()) ||
       complaint.complainer_city.toLowerCase().includes(search.toLowerCase()) ||
-      complaint.complainer_mobile
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
+      complaint.complainer_mobile.toLowerCase().includes(search.toLowerCase()) ||
       complaint.complaint_reason.toLowerCase().includes(search.toLowerCase());
 
     return matchesSearch;
   });
 
-const renderComplaintItem = ({ item }: { item: any }) => (
-  <View style={[styles.complaintCard, { backgroundColor: colors.surface }]}>
-    {/* Header */}
-    <View style={styles.headerRow}>
-      <Text style={[styles.title, { color: colors.textPrimary }]}>
-        {item.complainer_name}
-      </Text>
-      <View
-        style={[
-          styles.statusBadge,
-          {
-            backgroundColor:
-              item.status === "resolved" ? colors.success : colors.warning,
-          },
-        ]}
-      >
-        <Text style={styles.statusText}>{item.status}</Text>
+  const renderComplaintItem = ({ item }: { item: any }) => (
+    <View style={[styles.complaintCard, { backgroundColor: colors.surface }]}>
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>
+          {item.complainer_name}
+        </Text>
+        <View style={styles.headerActions}>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor:
+                  item.status === "resolved" ? colors.success : colors.warning,
+              },
+            ]}
+          >
+            <Text style={styles.statusText}>{item.status}</Text>
+          </View>
+          
+          {/* Action Buttons - Only show for pending complaints */}
+          {item.status === "pending" && (
+            <View style={styles.actionButtons}>
+              {/* Edit Button */}
+              <TouchableOpacity
+                style={[styles.editButton, { backgroundColor: colors.info }]}
+                onPress={() => handleEdit(item)}
+                disabled={deleteMutation.isPending || resolveMutation.isPending}
+              >
+                <Text style={styles.editButtonText}>✏️</Text>
+              </TouchableOpacity>
+              
+              {/* Delete Button */}
+              <TouchableOpacity
+                style={[styles.deleteButton, { backgroundColor: colors.error }]}
+                onPress={() => handleDelete(item.complaint_id, item.complainer_name)}
+                disabled={deleteMutation.isPending || resolveMutation.isPending}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {deleteMutation.isPending ? "..." : "🗑️"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
-    </View>
 
-    {/* Complaint Reason */}
-    <Text style={[styles.description, { color: colors.textPrimary }]}>
-      {item.complaint_reason}
-    </Text>
-
-    {/* City */}
-    <View style={styles.detailRow}>
-      <Text style={[styles.label, { color: colors.primary }]}>📍 City:</Text>
-      <Text style={[styles.value, { color: colors.textPrimary }]}>
-        {item.complainer_city}
-      </Text>
-    </View>
-
-    {/* Mobile */}
-    <View style={styles.detailRow}>
-      <Text style={[styles.label, { color: colors.primary }]}>📱 Mobile:</Text>
-      <Text style={[styles.value, { color: colors.textPrimary }]}>
-        {item.complainer_mobile}
-      </Text>
-    </View>
-
-    {/* Resolved At OR Mark as Resolved Button */}
-    {item.status === "resolved" ? (
+      {/* Complaint ID */}
       <View style={styles.detailRow}>
-        <Text style={[styles.label, { color: colors.primary }]}>
-          ✅ Resolved At:
-        </Text>
+        <Text style={[styles.label, { color: colors.primary }]}>📋 ID:</Text>
         <Text style={[styles.value, { color: colors.textPrimary }]}>
-          {item.resolved_at}
+          #{item.complaint_id}
         </Text>
       </View>
-    ) : (
-      <TouchableOpacity
-        style={[
-          styles.resolveButton, 
-          { 
-            backgroundColor: colors.success,
-            shadowColor: colors.success,
-          }
-        ]}
-        // onPress={() => markAsResolved(item.complaint_id)}
-      >
-        <Text style={styles.resolveButtonText}>Mark as Resolved</Text>
-      </TouchableOpacity>
-    )}
-  </View>
-);
 
+      {/* Complaint Reason */}
+      <Text style={[styles.description, { color: colors.textPrimary }]}>
+        {item.complaint_reason}
+      </Text>
+
+      {/* City */}
+      <View style={styles.detailRow}>
+        <Text style={[styles.label, { color: colors.primary }]}>📍 City:</Text>
+        <Text style={[styles.value, { color: colors.textPrimary }]}>
+          {item.complainer_city}
+        </Text>
+      </View>
+
+      {/* Mobile */}
+      <View style={styles.detailRow}>
+        <Text style={[styles.label, { color: colors.primary }]}>📱 Mobile:</Text>
+        <Text style={[styles.value, { color: colors.textPrimary }]}>
+          {item.complainer_mobile}
+        </Text>
+      </View>
+
+      {/* Created At */}
+      <View style={styles.detailRow}>
+        <Text style={[styles.label, { color: colors.primary }]}>📅 Created:</Text>
+        <Text style={[styles.value, { color: colors.textPrimary }]}>
+          {new Date(item.created_at).toLocaleDateString()}
+        </Text>
+      </View>
+
+      {/* Resolved At OR Mark as Resolved Button */}
+      {item.status === "resolved" ? (
+        <View style={styles.resolvedInfo}>
+          <View style={styles.detailRow}>
+            <Text style={[styles.label, { color: colors.primary }]}>
+              ✅ Resolved At:
+            </Text>
+            <Text style={[styles.value, { color: colors.textPrimary }]}>
+              {item.resolved_at ? new Date(item.resolved_at).toLocaleDateString() : 'N/A'}
+            </Text>
+          </View>
+          {item.resolved_by && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.label, { color: colors.primary }]}>
+                👤 Resolved By:
+              </Text>
+              <Text style={[styles.value, { color: colors.textPrimary }]}>
+                User #{item.resolved_by}
+              </Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.resolveButton, 
+            { 
+              backgroundColor: resolveMutation.isPending ? colors.disabled : colors.success,
+              shadowColor: colors.success,
+            }
+          ]}
+          onPress={() => handleResolve(item.complaint_id, item.complainer_name)}
+          disabled={resolveMutation.isPending}
+        >
+          <Text style={styles.resolveButtonText}>
+            {resolveMutation.isPending ? "Marking..." : "Mark as Resolved"}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Search Bar */}
-      <View
-        style={[styles.searchContainer, { backgroundColor: colors.background }]}
-      >
+      <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
         <TextInput
           style={[
             styles.searchInput,
@@ -142,9 +326,7 @@ const renderComplaintItem = ({ item }: { item: any }) => (
       </View>
 
       {/* Status Filter Buttons */}
-      <View
-        style={[styles.filterContainer, { backgroundColor: colors.background }]}
-      >
+      <View style={[styles.filterContainer, { backgroundColor: colors.background }]}>
         <TouchableOpacity
           style={[
             styles.filterButton,
@@ -152,12 +334,10 @@ const renderComplaintItem = ({ item }: { item: any }) => (
           ]}
           onPress={() => setFilterStatus("pending")}
         >
-          <Text
-            style={[
-              styles.filterButtonText,
-              filterStatus === "pending" && { color: colors.surface },
-            ]}
-          >
+          <Text style={[
+            styles.filterButtonText,
+            filterStatus === "pending" && { color: colors.surface },
+          ]}>
             Pending
           </Text>
         </TouchableOpacity>
@@ -169,35 +349,21 @@ const renderComplaintItem = ({ item }: { item: any }) => (
           ]}
           onPress={() => setFilterStatus("resolved")}
         >
-          <Text
-            style={[
-              styles.filterButtonText,
-              filterStatus === "resolved" && { color: colors.surface },
-            ]}
-          >
+          <Text style={[
+            styles.filterButtonText,
+            filterStatus === "resolved" && { color: colors.surface },
+          ]}>
             Resolved
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Results Count */}
-      <View
-        style={[
-          styles.resultsContainer,
-          {
-            flexDirection: "row",
-            justifyContent: "space-between",
-            marginRight: 5,
-          },
-          { backgroundColor: colors.background },
-        ]}
-      >
+      <View style={[styles.resultsContainer, { backgroundColor: colors.background }]}>
         <Text style={[styles.resultsText, { color: colors.textSecondary }]}>
           {filteredComplaints.length} {filterStatus} complaint
           {filteredComplaints.length !== 1 ? "s" : ""} found
         </Text>
-
-       
       </View>
 
       {/* Complaints List */}
@@ -217,6 +383,119 @@ const renderComplaintItem = ({ item }: { item: any }) => (
           </View>
         }
       />
+
+      {/* Edit Complaint Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeEditModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+              Edit Complaint #{editingComplaint?.complaint_id}
+            </Text>
+            
+            <ScrollView style={styles.modalForm}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  Complainer Name *
+                </Text>
+                <TextInput
+                  style={[styles.textInput, { 
+                    backgroundColor: colors.background, 
+                    color: colors.textPrimary,
+                    borderColor: colors.primary 
+                  }]}
+                  value={editForm.complainer_name}
+                  onChangeText={(text) => setEditForm(prev => ({ ...prev, complainer_name: text }))}
+                  placeholder="Enter complainer name"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  Mobile Number *
+                </Text>
+                <TextInput
+                  style={[styles.textInput, { 
+                    backgroundColor: colors.background, 
+                    color: colors.textPrimary,
+                    borderColor: colors.primary 
+                  }]}
+                  value={editForm.complainer_mobile}
+                  onChangeText={(text) => setEditForm(prev => ({ ...prev, complainer_mobile: text }))}
+                  placeholder="Enter 10-digit mobile number"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  City
+                </Text>
+                <TextInput
+                  style={[styles.textInput, { 
+                    backgroundColor: colors.background, 
+                    color: colors.textPrimary,
+                    borderColor: colors.primary 
+                  }]}
+                  value={editForm.complainer_city}
+                  onChangeText={(text) => setEditForm(prev => ({ ...prev, complainer_city: text }))}
+                  placeholder="Enter city"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>
+                  Complaint Reason *
+                </Text>
+                <TextInput
+                  style={[styles.textArea, { 
+                    backgroundColor: colors.background, 
+                    color: colors.textPrimary,
+                    borderColor: colors.primary 
+                  }]}
+                  value={editForm.complaint_reason}
+                  onChangeText={(text) => setEditForm(prev => ({ ...prev, complaint_reason: text }))}
+                  placeholder="Enter complaint reason"
+                  placeholderTextColor={colors.textSecondary}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.error }]}
+                onPress={closeEditModal}
+                disabled={updateMutation.isPending}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.updateButton, { 
+                  backgroundColor: updateMutation.isPending ? colors.disabled : colors.success 
+                }]}
+                onPress={handleUpdate}
+                disabled={updateMutation.isPending}
+              >
+                <Text style={styles.modalButtonText}>
+                  {updateMutation.isPending ? "Updating..." : "Update"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -409,5 +688,114 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     textAlign: "center",
+  },
+
+  //delete
+  deleteButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+   headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  //modal form
+   modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    maxHeight: "80%",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalForm: {
+    maxHeight: 400,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+
+   modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: '#808080',
+  },
+  updateButton: {
+    backgroundColor: '#7bc748ff'
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+   actionButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+   textInput: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+  },
+  textArea: {
+    height: 100,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    textAlignVertical: "top",
+  },
+  editButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  editButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
