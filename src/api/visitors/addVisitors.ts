@@ -33,7 +33,7 @@ export const addVisitor = async (
     }
 
     const res = await axios.post(
-      "http://192.168.29.13:3005/api/v1/visitors/add-visitors",
+      "http://20.235.242.228:2005/api/v1/visitors/add-visitors",
       formData,
       {
         headers: {

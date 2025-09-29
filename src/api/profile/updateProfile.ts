@@ -32,7 +32,7 @@ export const updateProfilePhoto = async (token: string, file: any) => {
     console.log("📤 Uploading file:", fileData);
 
     const res = await axios.patch(
-      'http://192.168.29.13:3005/api/v1/auth/update-profile-photo',
+      'http://20.235.242.228:2005/api/v1/auth/update-profile-photo',
       formData,
       {
         headers: {

@@ -3,7 +3,7 @@ import axios from "axios";
 export const getDetpList = async (token : string) => {
   try {
     const res = await axios.get(
-      "http://192.168.29.13:3005/api/v1/dept/get-all-departments", {
+      "http://20.235.242.228:2005/api/v1/dept/get-all-departments", {
         headers : {
           Authorization : `Bearer ${token}`
         }

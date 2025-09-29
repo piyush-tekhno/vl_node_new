@@ -4,7 +4,7 @@ import axios from "axios";
 export const addDepartment = async (token: string, dept: { dept_name: string; dept_head: string }) => {
   try {
     const res = await axios.post(
-      "http://192.168.29.13:3005/api/v1/dept/add-department",
+      "http://20.235.242.228:2005/api/v1/dept/add-department",
       dept,
       {
         headers: {

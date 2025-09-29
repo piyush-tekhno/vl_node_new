@@ -10,7 +10,7 @@ export interface EditProfileData {
 export const editProfile = async (profileData: EditProfileData, token: string) => {
   try {
     const res = await axios.put(
-      "http://192.168.29.13:3005/api/v1/auth/update-profile",
+      "http://20.235.242.228:2005/api/v1/auth/update-profile",
       profileData,
       {
         headers: {

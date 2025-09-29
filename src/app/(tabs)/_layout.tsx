@@ -32,10 +32,10 @@ export default function TabLayout() {
             style={{ marginRight: 15 }}
             onPress={() => router.push("/(tabs)/profile")} // ← Update this navigation
           >
-            <Image
+            {/* <Image
               source={{ uri: "https://i.pravatar.cc/100" }}
               style={{ width: 32, height: 32, borderRadius: 16 }}
-            />
+            /> */}
           </TouchableOpacity>
         ),
         tabBarStyle: {

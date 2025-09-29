@@ -1,7 +1,7 @@
 // src/api/Home/editVisitorLogs.ts
 import axios from 'axios';
 
-const API_BASE_URL = 'http://192.168.29.13:3005/api/v1';
+const API_BASE_URL = 'http://20.235.242.228:2005/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

@@ -36,25 +36,8 @@ export default function HomeLayout() {
         }} 
       />
 
-      <Stack.Screen
-        name="profile"
-        options={{
-          title : "Profile",
-          presentation : "card",
-          animation : "slide_from_right",
-          headerShown : false
-        }}
-      />
+      
 
-      <Stack.Screen
-        name='Complaints'
-        options={{
-          title : "Complaints",
-          presentation : "card",
-          animation : "slide_from_right",
-          headerShown : false
-        }}
-      />
     </Stack>
   );
 }

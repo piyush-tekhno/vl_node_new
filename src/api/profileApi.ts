@@ -9,7 +9,7 @@ export const getProfileInfo = async (token: string) => {
     }
 
     const response = await axios.get(
-      "http://192.168.29.13:3005/api/v1/auth/get-user-profile",
+      "http://20.235.242.228:2005/api/v1/auth/get-user-profile",
       {
         headers: {
           Authorization: `Bearer ${token}`,

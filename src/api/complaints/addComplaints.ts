@@ -1,5 +1,4 @@
 import axios from "axios";
-import { useAuth } from "@/src/context/AuthContext";
 
 export const addComplaint = async (
   complaintData: {
@@ -13,7 +12,7 @@ export const addComplaint = async (
 ) => {
   try {
     const res = await axios.post(
-      "http://192.168.29.13:3005/api/v1/visitors/register-complaints",
+      "http://20.235.242.228:2005/api/v1/visitors/register-complaints",
       complaintData,
       {
         headers: {

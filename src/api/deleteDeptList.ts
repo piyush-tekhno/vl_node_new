@@ -3,7 +3,7 @@ import axios from "axios";
 export const deleteDeptList = async (token: string, dept_id: number) => {
   try {
     const res = await axios.delete(
-      `http://192.168.29.13:3005/api/v1/dept/delete-department`,
+      `http://20.235.242.228:2005/api/v1/dept/delete-department`,
       {
         headers: {
           Authorization: `Bearer ${token}`

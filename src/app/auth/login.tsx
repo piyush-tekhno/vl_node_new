@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  Alert, 
-  StyleSheet, 
-  TouchableOpacity, 
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform 
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { useTheme } from '@/src/constants/theme';
+import { useAuth } from '@/src/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { useAuth } from '@/src/context/AuthContext';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
 export default function Login() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://192.168.29.13:3005/api/v1/auth/login", {
+      const response = await axios.post("http://20.235.242.228:2005/api/v1/auth/login", {
         email,
         password,
       });

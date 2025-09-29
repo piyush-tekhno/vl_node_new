@@ -3,7 +3,7 @@
 export const resolveComplaint = async (token: string, complaintId: number): Promise<any> => {
   try {
     const response = await fetch(
-      `http://192.168.29.13:3005/api/v1/visitors/update-complaint-status?complaint_id=${complaintId}&status=resolved`,
+      `http://20.235.242.228:2005/api/v1/visitors/update-complaint-status?complaint_id=${complaintId}&status=resolved`,
       {
         method: 'POST',
         headers: {

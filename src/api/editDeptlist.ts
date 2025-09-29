@@ -3,7 +3,7 @@ import axios from "axios";
 export const editDeptList = async (token: string, dept_id: number, departmentData: { dept_name: string; dept_head: string }) => {
   try {
     const res = await axios.put(
-      `http://192.168.29.13:3005/api/v1/dept/update-department?dept_id=${dept_id}`,
+      `http://20.235.242.228:2005/api/v1/dept/update-department?dept_id=${dept_id}`,
       departmentData,
       {
         headers: {

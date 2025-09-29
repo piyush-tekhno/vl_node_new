@@ -14,7 +14,7 @@ export const updateComplaint = async (
 ): Promise<any> => {
   try {
     const response = await axios.put(
-      `http://192.168.29.13:3005/api/v1/visitors/update-complaint`,
+      `http://20.235.242.228:2005/api/v1/visitors/update-complaint`,
       complaintData,
       {
         params: {
